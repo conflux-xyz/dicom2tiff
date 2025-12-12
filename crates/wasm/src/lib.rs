@@ -94,6 +94,21 @@ impl Drop for FileSystemSyncAccessHandleWrapper {
     }
 }
 
+fn is_dicom_file<R: Read + Seek>(reader: &mut R) -> bool {
+    let result = reader
+        .seek(std::io::SeekFrom::Start(128))
+        .and_then(|_| {
+            let mut buf = [0u8; 4];
+            reader.read_exact(&mut buf)?;
+            Ok(buf)
+        })
+        .map(|buf| buf == *b"DICM")
+        .unwrap_or(false);
+
+    reader.rewind().ok();
+    result
+}
+
 #[wasm_bindgen(js_name = "convertViaSyncAccessHandles")]
 pub async fn convert_via_sync_access_handles(
     #[wasm_bindgen(js_name = "inputSyncAccessHandles")] input_sync_access_handles: Vec<
@@ -104,11 +119,14 @@ pub async fn convert_via_sync_access_handles(
 ) -> Result<(), JsValue> {
     crate::panic_hook::set_panic_hook();
 
-    let readers = input_sync_access_handles
+    let mut readers = input_sync_access_handles
         .into_iter()
         .map(FileSystemSyncAccessHandleWrapper::from)
         .map(BufReader::new)
         .collect::<Vec<_>>();
+
+    // Remove any files that do not appear to be DICOM files
+    readers.retain_mut(is_dicom_file);
 
     let writer = FileSystemSyncAccessHandleWrapper::from(output_sync_access_handle);
 
