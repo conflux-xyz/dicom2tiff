@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DICOM to TIFF Converter</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 600px;
+      width: 100%;
+      padding: 40px;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .upload-section {
+      margin-bottom: 30px;
+    }
+
+    .upload-label {
+      display: block;
+      margin-bottom: 8px;
+      color: #555;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    .file-input-wrapper {
+      position: relative;
+      display: inline-block;
+      width: 100%;
+      margin-bottom: 15px;
+    }
+
+    input[type="file"] {
+      width: 100%;
+      padding: 12px;
+      border: 2px dashed #ddd;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+
+    input[type="file"]:hover {
+      border-color: #667eea;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .status {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .status.info {
+      background: #e3f2fd;
+      color: #1976d2;
+      border: 1px solid #90caf9;
+      display: block;
+    }
+
+    .status.success {
+      background: #e8f5e9;
+      color: #388e3c;
+      border: 1px solid #81c784;
+      display: block;
+    }
+
+    .status.error {
+      background: #ffebee;
+      color: #d32f2f;
+      border: 1px solid #ef5350;
+      display: block;
+    }
+
+    .progress-container {
+      margin-top: 20px;
+      display: none;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #f0f0f0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      width: 0%;
+      transition: width 0.3s;
+    }
+
+    .progress-text {
+      margin-top: 8px;
+      font-size: 13px;
+      color: #666;
+      text-align: center;
+    }
+
+    .download-section {
+      margin-top: 30px;
+      display: none;
+    }
+
+    .file-list {
+      margin-top: 15px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .file-item {
+      padding: 8px;
+      background: white;
+      margin-bottom: 8px;
+      border-radius: 4px;
+      font-size: 13px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .file-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .divider {
+      margin: 20px 0;
+      text-align: center;
+      position: relative;
+    }
+
+    .divider::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: #ddd;
+    }
+
+    .divider span {
+      background: white;
+      padding: 0 10px;
+      position: relative;
+      color: #999;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>DICOM to TIFF Converter</h1>
+    <p class="subtitle">Upload DICOM files or a ZIP archive to convert to TIFF format</p>
+
+    <div class="upload-section">
+      <label class="upload-label">Upload DICOM Files</label>
+      <input type="file" id="dicomFiles" multiple accept=".dcm,.dicom" />
+      <div id="dicomFileList" class="file-list" style="display: none;"></div>
+    </div>
+
+    <div class="divider"><span>OR</span></div>
+
+    <div class="upload-section">
+      <label class="upload-label">Upload ZIP Archive</label>
+      <input type="file" id="zipFile" accept=".zip" />
+    </div>
+
+    <button class="btn" id="convertBtn" disabled>Convert to TIFF</button>
+
+    <div id="status" class="status"></div>
+
+    <div class="progress-container" id="progressContainer">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="progress-text" id="progressText"></div>
+    </div>
+
+    <div class="download-section" id="downloadSection">
+      <button class="btn" id="downloadBtn">Download TIFF File</button>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script type="module">
+    let worker;
+    let dicomFiles = [];
+    let outputFileHandle = null;
+    let rootHandle = null;
+
+    const dicomFilesInput = document.getElementById('dicomFiles');
+    const zipFileInput = document.getElementById('zipFile');
+    const convertBtn = document.getElementById('convertBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const statusDiv = document.getElementById('status');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+    const downloadSection = document.getElementById('downloadSection');
+    const dicomFileList = document.getElementById('dicomFileList');
+
+    // Initialize worker
+    function initWorker() {
+      worker = new Worker('./worker.js', { type: 'module' });
+
+      worker.addEventListener('message', (event) => {
+        const { type, success, error, status, fileId } = event.data;
+
+        if (type === 'init') {
+          if (!success) {
+          //   showStatus('Worker initialized successfully', 'info');
+          // } else {
+            showStatus(`Worker initialization failed: ${error}`, 'error');
+          }
+        } else if (type === 'status') {
+          showStatus(status, 'info');
+          updateProgress(50, status);
+        } else if (type === 'convertViaOpfsComplete') {
+          showStatus('Conversion complete! Ready to download.', 'success');
+          updateProgress(100, 'Complete');
+          downloadSection.style.display = 'block';
+          convertBtn.disabled = false;
+        } else if (type === 'error') {
+          showStatus(`Error: ${error}`, 'error');
+          progressContainer.style.display = 'none';
+          convertBtn.disabled = false;
+        }
+      });
+
+      worker.addEventListener('error', (error) => {
+        console.log("ERROR", error);
+        showStatus(`Worker error: ${error.message}`, 'error');
+        convertBtn.disabled = false;
+      });
+    }
+
+    // Initialize OPFS
+    async function getOpfsRoot() {
+      if (!rootHandle) {
+        rootHandle = await navigator.storage.getDirectory();
+      }
+      return rootHandle;
+    }
+
+    // Show status message
+    function showStatus(message, type) {
+      statusDiv.textContent = message;
+      statusDiv.className = `status ${type}`;
+    }
+
+    // Update progress
+    function updateProgress(percent, text) {
+      progressContainer.style.display = 'block';
+      progressFill.style.width = `${percent}%`;
+      progressText.textContent = text;
+    }
+
+    // Update file list display
+    function updateFileList() {
+      if (dicomFiles.length > 0) {
+        dicomFileList.style.display = 'block';
+        dicomFileList.innerHTML = dicomFiles.map(f =>
+          `<div class="file-item">
+            <span>${f.name}</span>
+            <span style="color: #999;">${(f.size / 1024).toFixed(1)} KB</span>
+          </div>`
+        ).join('');
+      } else {
+        dicomFileList.style.display = 'none';
+      }
+    }
+
+    // Handle DICOM files input
+    dicomFilesInput.addEventListener('change', (e) => {
+      dicomFiles = Array.from(e.target.files);
+      convertBtn.disabled = dicomFiles.length === 0;
+      zipFileInput.value = '';
+      downloadSection.style.display = 'none';
+      updateFileList();
+      showStatus(`${dicomFiles.length} DICOM file(s) selected`, 'info');
+    });
+
+    // Handle ZIP file input
+    zipFileInput.addEventListener('change', async (e) => {
+      const zipFile = e.target.files[0];
+      if (!zipFile) return;
+
+      try {
+        showStatus('Extracting ZIP archive...', 'info');
+        updateProgress(20, 'Extracting ZIP...');
+        progressContainer.style.display = 'block';
+
+        const zip = new JSZip();
+        const zipContent = await zip.loadAsync(zipFile);
+
+        dicomFiles = [];
+
+        for (const [filename, file] of Object.entries(zipContent.files)) {
+          if (!file.dir && (filename.toLowerCase().endsWith('.dcm') || filename.toLowerCase().endsWith('.dicom'))) {
+            const blob = await file.async('blob');
+            const dicomFile = new File([blob], filename.split('/').pop(), { type: 'application/dicom' });
+            dicomFiles.push(dicomFile);
+          }
+        }
+
+        if (dicomFiles.length === 0) {
+          showStatus('No DICOM files found in ZIP archive', 'error');
+          convertBtn.disabled = true;
+          progressContainer.style.display = 'none';
+        } else {
+          showStatus(`Extracted ${dicomFiles.length} DICOM file(s) from ZIP`, 'success');
+          convertBtn.disabled = false;
+          progressContainer.style.display = 'none';
+          updateFileList();
+        }
+
+        dicomFilesInput.value = '';
+        downloadSection.style.display = 'none';
+      } catch (error) {
+        showStatus(`Failed to extract ZIP: ${error.message}`, 'error');
+        convertBtn.disabled = true;
+        progressContainer.style.display = 'none';
+      }
+    });
+
+    // Convert button handler
+    convertBtn.addEventListener('click', async () => {
+      if (dicomFiles.length === 0) {
+        showStatus('Please select DICOM files first', 'error');
+        return;
+      }
+
+      convertBtn.disabled = true;
+      downloadSection.style.display = 'none';
+
+      try {
+        showStatus('Preparing files...', 'info');
+        updateProgress(10, 'Writing files to OPFS...');
+
+        const root = await getOpfsRoot();
+
+        // Create input directory
+        const inputDir = await root.getDirectoryHandle('dicom_input', { create: true });
+
+        // Write DICOM files to OPFS
+        const inputFileHandles = [];
+        for (let i = 0; i < dicomFiles.length; i++) {
+          const file = dicomFiles[i];
+          const fileHandle = await inputDir.getFileHandle(file.name, { create: true });
+          const writable = await fileHandle.createWritable();
+          await file.stream().pipeTo(writable);
+          inputFileHandles.push(fileHandle);
+
+          updateProgress(10 + (i + 1) / dicomFiles.length * 30, `Writing ${i + 1}/${dicomFiles.length} files...`);
+        }
+
+        // Create output file
+        const timestamp = Date.now();
+        const outputFileName = `output_${timestamp}.tiff`;
+        outputFileHandle = await root.getFileHandle(outputFileName, { create: true });
+
+        showStatus('Starting conversion...', 'info');
+        updateProgress(40, 'Converting...');
+
+        // Send to worker
+        worker.postMessage({
+          type: 'convertViaOpfs',
+          inputFileHandles,
+          outputFileHandle,
+          fileId: timestamp
+        });
+
+      } catch (error) {
+        showStatus(`Failed to convert: ${error.message}`, 'error');
+        convertBtn.disabled = false;
+        progressContainer.style.display = 'none';
+        console.error(error);
+      }
+    });
+
+    // Download button handler
+    downloadBtn.addEventListener('click', async () => {
+      if (!outputFileHandle) {
+        showStatus('No output file available', 'error');
+        return;
+      }
+
+      try {
+        const file = await outputFileHandle.getFile();
+        const url = URL.createObjectURL(file);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'converted.tiff';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showStatus('Download started', 'success');
+      } catch (error) {
+        showStatus(`Failed to download: ${error.message}`, 'error');
+        console.error(error);
+      }
+    });
+
+    // Initialize on load
+    initWorker();
+  </script>
+</body>
+</html>
