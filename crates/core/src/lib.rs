@@ -2,8 +2,7 @@ use std::io::{Read, Seek, Write};
 
 use dicom_core::value::Value as DicomValue;
 use dicom_dictionary_std::tags as dicom_tags;
-use tiff::encoder::TiffKind;
-use tiff::encoder::{TiffEncoder, TiffKindBig};
+use tiff::encoder::{TiffEncoder, TiffKind, TiffKindBig};
 use tiff::tags::{PhotometricInterpretation as TiffPhotometricInterpretation, Tag as TiffTag};
 
 mod shared_read_seek;
@@ -215,7 +214,7 @@ pub fn convert_dicom_sources<R: Read + Seek, W: Write + Seek>(
         let mut dir = tiff.image_directory()?;
 
         // Fake Aperio SVS
-        let image_description = format!("Aperio\n|MPP={}", mpp_x);
+        let image_description = format!("Aperio\n|MPP = {}", mpp_x);
         dir.write_tag(TiffTag::ImageDescription, image_description.as_str())?;
 
         // Dimensions
