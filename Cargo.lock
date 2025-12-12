@@ -171,6 +171,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "dicom2tiff-cli"
+version = "0.1.0"
+dependencies = [
+ "dicom2tiff",
+]
+
+[[package]]
 name = "either"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

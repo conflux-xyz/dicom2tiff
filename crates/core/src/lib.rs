@@ -1,7 +1,4 @@
-use std::env;
-use std::fs;
-use std::io::{self, Read, Seek};
-use std::path::{Path, PathBuf};
+use std::io::{Read, Seek, Write};
 
 use dicom_core::value::Value as DicomValue;
 use dicom_dictionary_std::tags as dicom_tags;
@@ -9,48 +6,17 @@ use tiff::encoder::TiffKind;
 use tiff::encoder::{TiffEncoder, TiffKindBig};
 use tiff::tags::{PhotometricInterpretation as TiffPhotometricInterpretation, Tag as TiffTag};
 
+mod shared_read_seek;
+use shared_read_seek::SharedReadSeek;
+
 type BoxErrorResult<T> = Result<T, Box<dyn std::error::Error>>;
 
-fn is_dicom_file(path: &Path) -> bool {
-    fs::File::open(path)
-        .and_then(|mut f| {
-            f.seek(io::SeekFrom::Start(128))?;
-            let mut buf = [0u8; 4];
-            f.read_exact(&mut buf)?;
-            Ok(buf)
-        })
-        .map(|buf| buf == *b"DICM")
-        .unwrap_or(false)
-}
-
-fn get_dicom_files(path: &Path) -> BoxErrorResult<Vec<PathBuf>> {
-    let dir = if path.is_file() {
-        path.parent()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "No parent directory"))?
-    } else if path.is_dir() {
-        path
-    } else {
-        return Err("Path is not a file or directory".into());
-    };
-
-    let mut paths = Vec::new();
-    for entry in fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_file() && is_dicom_file(&path) {
-            paths.push(path);
-        }
-    }
-
-    Ok(paths)
-}
-
-fn get_dicom_pyramid_files(paths: Vec<PathBuf>) -> BoxErrorResult<Vec<PathBuf>> {
+fn get_dicom_pyramid_sources(sources: Vec<SharedReadSeek>) -> BoxErrorResult<Vec<SharedReadSeek>> {
     let mut dcm_objects = Vec::new();
-    for path in paths {
+    for source in sources {
         let obj = dicom_object::OpenFileOptions::new()
             .read_until(dicom_tags::PIXEL_DATA)
-            .open_file(&path)?;
+            .from_reader(source.clone())?;
         let image_type = obj.element(dicom_tags::IMAGE_TYPE)?.to_multi_str()?;
         // Only take pyramid levels
         let vals: Vec<&str> = image_type.iter().map(|s| s.trim()).collect();
@@ -58,7 +24,7 @@ fn get_dicom_pyramid_files(paths: Vec<PathBuf>) -> BoxErrorResult<Vec<PathBuf>> 
         let v2 = ["DERIVED", "PRIMARY", "VOLUME", "NONE"];
         let v3 = ["DERIVED", "PRIMARY", "VOLUME", "RESAMPLED"];
         if vals == v1 || vals == v2 || vals == v3 {
-            dcm_objects.push((path, obj));
+            dcm_objects.push((source, obj));
         }
     }
 
@@ -77,12 +43,15 @@ fn get_dicom_pyramid_files(paths: Vec<PathBuf>) -> BoxErrorResult<Vec<PathBuf>> 
         b_cols.cmp(&a_cols)
     });
 
-    let paths = dcm_objects
-        .iter()
-        .map(|(path, _)| path.clone())
-        .collect::<Vec<_>>();
+    let sources = dcm_objects
+        .into_iter()
+        .map(|(mut source, _)| {
+            source.rewind()?;
+            Ok(source)
+        })
+        .collect::<Result<Vec<_>, Box<dyn std::error::Error>>>()?;
 
-    Ok(paths)
+    Ok(sources)
 }
 
 fn dicom_photometric_interpretation_to_tiff(
@@ -103,27 +72,23 @@ fn dicom_photometric_interpretation_to_tiff(
     }
 }
 
-fn main() -> BoxErrorResult<()> {
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 3 {
-        eprintln!("Usage: {} <directory or .dcm file> <.tiff file>", args[0]);
-        std::process::exit(1);
-    }
-
-    let input_path = Path::new(&args[1]);
-    let output_path = Path::new(&args[2]);
-    let dicom_paths = get_dicom_files(input_path)?;
-    let dicom_pyramid_paths = get_dicom_pyramid_files(dicom_paths)?;
-
-    if dicom_pyramid_paths.is_empty() {
+pub fn convert_dicom_sources<R: Read + Seek, W: Write + Seek>(
+    dicom_sources: Vec<R>,
+    output: W,
+) -> BoxErrorResult<()> {
+    let dicom_read_seeks = dicom_sources
+        .into_iter()
+        .map(|r| SharedReadSeek::from_read_seek(r))
+        .collect::<Vec<_>>();
+    let dicom_pyramid_sources = get_dicom_pyramid_sources(dicom_read_seeks)?;
+    if dicom_pyramid_sources.is_empty() {
         return Err("No pyramid levels found".into());
     }
 
-    let output_file = fs::File::create(output_path)?;
-    let mut tiff = TiffEncoder::new_big(output_file)?;
+    let mut tiff = TiffEncoder::new_big(output)?;
 
-    for dcm_path in dicom_pyramid_paths {
-        let dcm_object = dicom_object::open_file(&dcm_path)?;
+    for dcm_source in dicom_pyramid_sources {
+        let dcm_object = dicom_object::from_reader(dcm_source)?;
         // TODO: Handle sparsely tiled DICOMs
         let is_sparse = dcm_object
             .element_opt(dicom_tags::DIMENSION_ORGANIZATION_TYPE)?
