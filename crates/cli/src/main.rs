@@ -47,6 +47,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let input_path = Path::new(&args[1]);
     let output_path = Path::new(&args[2]);
     let dicom_paths = get_dicom_files(input_path)?;
-    dicom2tiff::convert_dicom_files(dicom_paths, output_path)?;
+    let dicom_sources = dicom_paths
+        .into_iter()
+        .map(fs::File::open)
+        .collect::<Result<Vec<_>, _>>()?;
+    let output = fs::File::create(output_path)?;
+    dicom2tiff::convert_dicom_sources(dicom_sources, output)?;
     Ok(())
 }
