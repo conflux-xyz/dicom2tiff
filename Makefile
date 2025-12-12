@@ -19,3 +19,13 @@ build-wasm:
 
 build-cli:
 	cargo build -p dicom2tiff-cli --release
+
+build-gh-pages: build-wasm
+	rm -rf docs
+	mkdir docs/
+	touch docs/.nojekyll
+	cp examples/web/index.html docs/
+	cp examples/web/worker.js docs/
+	sed 's|../../crates/wasm/pkg/dicom2tiff.js|./wasm/dicom2tiff.js|g' docs/worker.js > docs/worker.js.tmp && mv docs/worker.js.tmp docs/worker.js
+	mkdir docs/wasm
+	rsync -av --exclude='.gitignore' crates/wasm/pkg/ docs/wasm/
