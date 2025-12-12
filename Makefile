@@ -3,3 +3,6 @@ clippy:
 
 format:
 	cargo fmt
+
+build-cli:
+	cargo build -p dicom2tiff-cli --release

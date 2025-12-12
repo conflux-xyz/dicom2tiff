@@ -1,0 +1,13 @@
+[package]
+name = "dicom2tiff"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+dicom-core = "0.9.0"
+dicom-dictionary-std = "0.9.0"
+dicom-object = "0.9.0"
+tiff = { version = "0.10.3", default-features = false }
