@@ -26,10 +26,13 @@ fn is_dicom_data<R: Read + Seek>(reader: &mut R) -> io::Result<bool> {
 }
 
 fn is_zip_file(path: &Path) -> bool {
-    path.extension()
-        .and_then(|ext| ext.to_str())
-        .map(|ext| ext.eq_ignore_ascii_case("zip"))
-        .unwrap_or(false)
+    if let Ok(mut file) = fs::File::open(path) {
+        let mut signature = [0u8; 4];
+        if file.read_exact(&mut signature).is_ok() {
+            return &signature == b"PK\x03\x04";
+        }
+    }
+    false
 }
 
 fn get_dicom_files_from_zip(
