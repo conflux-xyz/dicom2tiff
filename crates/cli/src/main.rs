@@ -21,6 +21,7 @@ fn is_dicom_data<R: Read + Seek>(reader: &mut R) -> io::Result<bool> {
     reader.seek(io::SeekFrom::Start(128))?;
     let mut buf = [0u8; 4];
     reader.read_exact(&mut buf)?;
+    reader.rewind()?;
     Ok(buf == *b"DICM")
 }
 
@@ -55,10 +56,9 @@ fn get_dicom_files_from_zip(
         io::copy(&mut zip_file, &mut temp_file)?;
 
         // Seek back to start and check if it's a DICOM file
-        temp_file.seek(io::SeekFrom::Start(0))?;
+        temp_file.rewind()?;
         if is_dicom_data(&mut temp_file).unwrap_or(false) {
             // Seek back to the beginning for processing
-            temp_file.seek(io::SeekFrom::Start(0))?;
             dicom_files.push(temp_file);
         }
         // If not a DICOM file, temp_file is dropped and auto-deleted

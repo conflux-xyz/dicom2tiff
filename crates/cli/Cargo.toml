@@ -5,5 +5,5 @@ edition = "2024"
 
 [dependencies]
 dicom2tiff = { path = "../core" }
-zip = "2.2"
-tempfile = "3.15"
+zip = "6.0.0"
+tempfile = "3.23.0"
