@@ -166,6 +166,12 @@ The project is organized as a Cargo workspace with three crates:
 - Requires DICOM files to have specific ImageType values for pyramid level detection
 - JPEG tables extraction for shared JPEG compression is not yet implemented
 
+## FAQs
+
+### Why do the output TIFF files look like Aperio SVS files?
+
+Part of the success criteria is that the output file be openable by popular software like OpenSlide. However, OpenSlide, at least through its standard `pip install openslide-bin openslide-python` installation procedure, does not support JPEG 2000 encoding with the "Generic TIFF" format. By making the output appear to OpenSlide like Aperio SVS files (putting "Aperio" in the TIFF ImageDescription), we can allow for JPEG 2000 compressed tiles. Using Aperio SVS as the output flavor also provides a straightforward path to supported associated images (macros and labels), at least in ways that OpenSlide can recognize them.
+
 ## Contributing
 
 Contributions are welcome. Please ensure code passes clippy checks and follows the existing style.
