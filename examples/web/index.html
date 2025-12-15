@@ -321,14 +321,26 @@
       progressText.textContent = text;
     }
 
+    // Format file size with appropriate units
+    function formatFileSize(bytes) {
+      if (bytes >= 1000000000) {
+        return `${(bytes / 1000000000).toFixed(1)} GB`;
+      } else if (bytes >= 1000000) {
+        return `${(bytes / 1000000).toFixed(1)} MB`;
+      } else {
+        return `${(bytes / 1000).toFixed(1)} KB`;
+      }
+    }
+
     // Update file list display
     function updateFileList() {
       if (dicomFiles.length > 0) {
         dicomFileList.style.display = 'block';
-        dicomFileList.innerHTML = dicomFiles.map(f =>
+        const sortedFiles = [...dicomFiles].sort((a, b) => a.name.localeCompare(b.name));
+        dicomFileList.innerHTML = sortedFiles.map(f =>
           `<div class="file-item">
             <span>${f.name}</span>
-            <span style="color: #999;">${(f.size / 1024).toFixed(1)} KB</span>
+            <span style="color: #999;">${formatFileSize(f.size)}</span>
           </div>`
         ).join('');
       } else {
