@@ -434,7 +434,25 @@
 
         const root = await getOpfsRoot();
 
-        // Create input directory
+        // Clean up previous input directory if it exists
+        try {
+          await root.removeEntry('dicom_input', { recursive: true });
+        } catch (e) {
+          // Directory might not exist, that's okay
+        }
+
+        // Clean up old output files
+        for await (const entry of root.values()) {
+          if (entry.kind === 'file' && entry.name.startsWith('output_') && entry.name.endsWith('.tiff')) {
+            try {
+              await root.removeEntry(entry.name);
+            } catch (e) {
+              console.warn(`Failed to remove old output file ${entry.name}:`, e);
+            }
+          }
+        }
+
+        // Create fresh input directory
         const inputDir = await root.getDirectoryHandle('dicom_input', { create: true });
 
         // Write DICOM files to OPFS
