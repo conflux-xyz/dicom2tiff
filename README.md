@@ -4,6 +4,10 @@ Convert DICOM whole-slide imaging (WSI) files to multi-resolution pyramidal TIFF
 
 This tool converts DICOM WSI files into BigTIFF format compatible with Aperio SVS viewers and analysis software. It preserves pyramid levels, resolution metadata, and color profiles while supporting various photometric interpretations and compression methods.
 
+## Try it in your browser
+
+Try out the in-browser WASM conversion at **[https://github.conflux.xyz/dicom2tiff/](https://github.conflux.xyz/dicom2tiff/)**. All conversions happen locally in your browser with no server uploads required.
+
 ## Features
 
 - Convert DICOM WSI files to pyramidal TIFF format
