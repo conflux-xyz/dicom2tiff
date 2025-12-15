@@ -214,7 +214,7 @@
     <p class="subtitle">Upload DICOM files or a ZIP archive to convert to TIFF format</p>
 
     <div class="upload-section">
-      <label class="upload-label">Upload DICOM Files</label>
+      <label class="upload-label" id="dicomLabel">Upload DICOM Files</label>
       <input type="file" id="dicomFiles" multiple accept=".dcm,.dicom" />
       <div id="dicomFileList" class="file-list" style="display: none;"></div>
     </div>
@@ -222,9 +222,11 @@
     <div class="divider"><span>OR</span></div>
 
     <div class="upload-section">
-      <label class="upload-label">Upload ZIP Archive</label>
+      <label class="upload-label" id="zipLabel">Upload ZIP Archive</label>
       <input type="file" id="zipFile" accept=".zip" />
     </div>
+
+    <button class="btn" id="clearBtn" style="display: none; margin-bottom: 15px; background: #6c757d;">Clear Selection</button>
 
     <button class="btn" id="convertBtn" disabled>Convert to TIFF</button>
 
@@ -253,12 +255,15 @@
     const zipFileInput = document.getElementById('zipFile');
     const convertBtn = document.getElementById('convertBtn');
     const downloadBtn = document.getElementById('downloadBtn');
+    const clearBtn = document.getElementById('clearBtn');
     const statusDiv = document.getElementById('status');
     const progressContainer = document.getElementById('progressContainer');
     const progressFill = document.getElementById('progressFill');
     const progressText = document.getElementById('progressText');
     const downloadSection = document.getElementById('downloadSection');
     const dicomFileList = document.getElementById('dicomFileList');
+    const dicomLabel = document.getElementById('dicomLabel');
+    const zipLabel = document.getElementById('zipLabel');
 
     // Initialize worker
     function initWorker() {
@@ -339,6 +344,16 @@
       downloadSection.style.display = 'none';
       updateFileList();
       showStatus(`${dicomFiles.length} DICOM file(s) selected`, 'info');
+
+      // Hide file inputs, labels, and divider, show clear button
+      if (dicomFiles.length > 0) {
+        dicomFilesInput.style.display = 'none';
+        zipFileInput.style.display = 'none';
+        dicomLabel.style.display = 'none';
+        zipLabel.style.display = 'none';
+        document.querySelector('.divider').style.display = 'none';
+        clearBtn.style.display = 'block';
+      }
     });
 
     // Handle ZIP file input
@@ -384,6 +399,14 @@
           convertBtn.disabled = false;
           progressContainer.style.display = 'none';
           updateFileList();
+
+          // Hide file inputs, labels, and divider, show clear button
+          dicomFilesInput.style.display = 'none';
+          zipFileInput.style.display = 'none';
+          dicomLabel.style.display = 'none';
+          zipLabel.style.display = 'none';
+          document.querySelector('.divider').style.display = 'none';
+          clearBtn.style.display = 'block';
         }
 
         dicomFilesInput.value = '';
@@ -473,6 +496,33 @@
         showStatus(`Failed to download: ${error.message}`, 'error');
         console.error(error);
       }
+    });
+
+    // Clear button handler
+    clearBtn.addEventListener('click', () => {
+      // Reset file selections
+      dicomFiles = [];
+      dicomFilesInput.value = '';
+      zipFileInput.value = '';
+      outputFileHandle = null;
+
+      // Show file inputs, labels, and divider
+      dicomFilesInput.style.display = 'block';
+      zipFileInput.style.display = 'block';
+      dicomLabel.style.display = 'block';
+      zipLabel.style.display = 'block';
+      document.querySelector('.divider').style.display = 'block';
+
+      // Hide clear button, file list, and download section
+      clearBtn.style.display = 'none';
+      dicomFileList.style.display = 'none';
+      downloadSection.style.display = 'none';
+      progressContainer.style.display = 'none';
+
+      // Reset button and status
+      convertBtn.disabled = true;
+      statusDiv.className = 'status';
+      statusDiv.textContent = '';
     });
 
     // Initialize on load
