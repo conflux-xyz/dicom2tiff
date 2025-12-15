@@ -26,6 +26,7 @@ build-gh-pages: build-wasm
 	touch docs/.nojekyll
 	cp examples/web/index.html docs/
 	cp examples/web/worker.js docs/
+	cp examples/web/logo* docs/
 	sed 's|../../crates/wasm/pkg/dicom2tiff.js|./wasm/dicom2tiff.js|g' docs/worker.js > docs/worker.js.tmp && mv docs/worker.js.tmp docs/worker.js
 	mkdir docs/wasm
 	rsync -av --exclude='.gitignore' crates/wasm/pkg/ docs/wasm/
