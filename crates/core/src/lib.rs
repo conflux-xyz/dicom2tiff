@@ -16,14 +16,17 @@ fn get_dicom_pyramid_sources(sources: Vec<SharedReadSeek>) -> BoxErrorResult<Vec
         let obj = dicom_object::OpenFileOptions::new()
             .read_until(dicom_tags::PIXEL_DATA)
             .from_reader(source.clone())?;
-        let image_type = obj.element(dicom_tags::IMAGE_TYPE)?.to_multi_str()?;
-        // Only take pyramid levels
-        let vals: Vec<&str> = image_type.iter().map(|s| s.trim()).collect();
-        let v1 = ["ORIGINAL", "PRIMARY", "VOLUME", "NONE"];
-        let v2 = ["DERIVED", "PRIMARY", "VOLUME", "NONE"];
-        let v3 = ["DERIVED", "PRIMARY", "VOLUME", "RESAMPLED"];
-        if vals == v1 || vals == v2 || vals == v3 {
-            dcm_objects.push((source, obj));
+        let image_type_elem = obj.element_opt(dicom_tags::IMAGE_TYPE)?;
+        if let Some(image_type_val) = image_type_elem {
+            let image_type = image_type_val.to_multi_str()?;
+            // Only take pyramid levels
+            let vals: Vec<&str> = image_type.iter().map(|s| s.trim()).collect();
+            let v1 = ["ORIGINAL", "PRIMARY", "VOLUME", "NONE"];
+            let v2 = ["DERIVED", "PRIMARY", "VOLUME", "NONE"];
+            let v3 = ["DERIVED", "PRIMARY", "VOLUME", "RESAMPLED"];
+            if vals == v1 || vals == v2 || vals == v3 {
+                dcm_objects.push((source, obj));
+            }
         }
     }
 
