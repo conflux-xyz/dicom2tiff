@@ -242,7 +242,7 @@
     </div>
   </div>
 
-  <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://unpkg.com/@zip.js/zip.js@2.8.11/dist/zip.min.js"></script>
   <script type="module">
     let worker;
     let dicomFiles = [];
@@ -351,18 +351,29 @@
         updateProgress(20, 'Extracting ZIP...');
         progressContainer.style.display = 'block';
 
-        const zip = new JSZip();
-        const zipContent = await zip.loadAsync(zipFile);
+        // Use zip.js for streaming (handles large files)
+        const zipReader = new zip.ZipReader(new zip.BlobReader(zipFile));
+        const entries = await zipReader.getEntries();
 
         dicomFiles = [];
+        let processedCount = 0;
 
-        for (const [filename, file] of Object.entries(zipContent.files)) {
-          if (!file.dir && (filename.toLowerCase().endsWith('.dcm') || filename.toLowerCase().endsWith('.dicom'))) {
-            const blob = await file.async('blob');
-            const dicomFile = new File([blob], filename.split('/').pop(), { type: 'application/dicom' });
-            dicomFiles.push(dicomFile);
+        for (const entry of entries) {
+          if (!entry.directory) {
+            const filename = entry.filename.toLowerCase();
+            if (filename.endsWith('.dcm') || filename.endsWith('.dicom')) {
+              // Stream the entry to a blob
+              const blob = await entry.getData(new zip.BlobWriter('application/dicom'));
+              const dicomFile = new File([blob], entry.filename.split('/').pop(), { type: 'application/dicom' });
+              dicomFiles.push(dicomFile);
+
+              processedCount++;
+              updateProgress(20 + (processedCount / entries.length) * 60, `Extracting ${processedCount}/${entries.length} files...`);
+            }
           }
         }
+
+        await zipReader.close();
 
         if (dicomFiles.length === 0) {
           showStatus('No DICOM files found in ZIP archive', 'error');
