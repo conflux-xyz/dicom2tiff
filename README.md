@@ -157,6 +157,7 @@ The project is organized as a Cargo workspace with three crates:
 
 ## Limitations
 
+- Only includes pyramid levels in the output TIFF; associated images (label, macro) are not currently included
 - Currently does not support sparsely tiled DICOM images (TILED_SPARSE)
 - Requires DICOM files to have specific ImageType values for pyramid level detection
 - JPEG tables extraction for shared JPEG compression is not yet implemented
