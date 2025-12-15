@@ -87,7 +87,7 @@ jobs:
         run: |
           cd target/${{ matrix.target }}/release
           if (Test-Path dicom2tiff-cli.exe) {
-            Move-Item dicom2tiff-cli.exe dicom2tiff.exe
+            Move-Item dicom2tiff-cli.exe dicom2tiff.exe -Force
           }
           Compress-Archive -Path dicom2tiff.exe -DestinationPath $env:GITHUB_WORKSPACE/dicom2tiff-${{ matrix.target }}.zip
 
