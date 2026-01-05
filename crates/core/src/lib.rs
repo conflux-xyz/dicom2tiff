@@ -226,7 +226,10 @@ pub fn convert_dicom_sources<R: Read + Seek, W: Write + Seek>(
         dir.write_tag(TiffTag::TileWidth, tile_width)?;
         dir.write_tag(TiffTag::TileLength, tile_height)?;
         // Resolution (MPP)
-        dir.write_tag(TiffTag::ResolutionUnit, 3)?; // 3 = centimeters
+        dir.write_tag(
+            TiffTag::ResolutionUnit,
+            tiff::tags::ResolutionUnit::Centimeter.to_u16(),
+        )?;
         dir.write_tag(TiffTag::XResolution, x_resolution)?;
         dir.write_tag(TiffTag::YResolution, y_resolution)?;
         // Image related

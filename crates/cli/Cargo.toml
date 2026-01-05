@@ -1,9 +1,10 @@
 [package]
 name = "dicom2tiff-cli"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 
 [dependencies]
 dicom2tiff = { path = "../core" }
+clap = { version = "4", features = ["derive"] }
 zip = "6.0.0"
 tempfile = "3.23.0"

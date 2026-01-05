@@ -1,9 +1,26 @@
-use std::env;
 use std::fs;
 use std::io::{self, BufReader, Read, Seek};
 use std::path::{Path, PathBuf};
+
+use clap::Parser;
 use tempfile::NamedTempFile;
 use zip::ZipArchive;
+
+/// Convert DICOM files to TIFF format
+#[derive(Parser)]
+#[command(name = "dicom2tiff")]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// Input path (directory, .dcm file, or .zip file)
+    input: PathBuf,
+
+    /// Output .tiff file
+    output: PathBuf,
+
+    /// Process only the specified file (do not scan parent directory)
+    #[arg(short, long)]
+    single: bool,
+}
 
 fn is_dicom_file(path: &Path) -> bool {
     fs::File::open(path)
@@ -93,24 +110,29 @@ fn get_dicom_files(path: &Path) -> Result<Vec<PathBuf>, Box<dyn std::error::Erro
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 3 {
-        eprintln!(
-            "Usage: {} <directory, .dcm file, or .zip file> <.tiff file>",
-            args[0]
-        );
-        std::process::exit(1);
-    }
+    let args = Args::parse();
 
-    let input_path = Path::new(&args[1]);
-    let output_path = Path::new(&args[2]);
-    let output = fs::File::create(output_path)?;
+    let input_path = &args.input;
+    let output = fs::File::create(&args.output)?;
 
     // Check if the input is a ZIP file
     if input_path.is_file() && is_zip_file(input_path) {
         let dicom_files = get_dicom_files_from_zip(input_path)?;
         let dicom_sources: Vec<BufReader<_>> =
             dicom_files.into_iter().map(BufReader::new).collect();
+        dicom2tiff::convert_dicom_sources(dicom_sources, output)?;
+    } else if args.single {
+        // Single file mode: only process the specified file
+        if !input_path.is_file() {
+            eprintln!("Error: --single requires a file path, not a directory");
+            std::process::exit(1);
+        }
+        if !is_dicom_file(input_path) {
+            eprintln!("Error: {} is not a valid DICOM file", input_path.display());
+            std::process::exit(1);
+        }
+        let file = fs::File::open(input_path)?;
+        let dicom_sources = vec![BufReader::new(file)];
         dicom2tiff::convert_dicom_sources(dicom_sources, output)?;
     } else {
         let dicom_paths = get_dicom_files(input_path)?;
