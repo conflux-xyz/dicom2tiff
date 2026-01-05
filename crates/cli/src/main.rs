@@ -11,7 +11,7 @@ use zip::ZipArchive;
 #[command(name = "dicom2tiff")]
 #[command(version, about, long_about = None)]
 struct Args {
-    /// Input path (directory, .dcm file, or .zip file)
+    /// Input path (directory, .dcm file, or .zip file). When using --single, this must be a .dcm file.
     input: PathBuf,
 
     /// Output .tiff file
@@ -115,13 +115,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let input_path = &args.input;
     let output = fs::File::create(&args.output)?;
 
-    // Check if the input is a ZIP file
-    if input_path.is_file() && is_zip_file(input_path) {
-        let dicom_files = get_dicom_files_from_zip(input_path)?;
-        let dicom_sources: Vec<BufReader<_>> =
-            dicom_files.into_iter().map(BufReader::new).collect();
-        dicom2tiff::convert_dicom_sources(dicom_sources, output)?;
-    } else if args.single {
+    if args.single {
         // Single file mode: only process the specified file
         if !input_path.is_file() {
             eprintln!("Error: --single requires a file path, not a directory");
@@ -133,6 +127,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         let file = fs::File::open(input_path)?;
         let dicom_sources = vec![BufReader::new(file)];
+        dicom2tiff::convert_dicom_sources(dicom_sources, output)?;
+    // Check if the input is a ZIP file
+    } else if input_path.is_file() && is_zip_file(input_path) {
+        let dicom_files = get_dicom_files_from_zip(input_path)?;
+        let dicom_sources: Vec<BufReader<_>> =
+            dicom_files.into_iter().map(BufReader::new).collect();
         dicom2tiff::convert_dicom_sources(dicom_sources, output)?;
     } else {
         let dicom_paths = get_dicom_files(input_path)?;
