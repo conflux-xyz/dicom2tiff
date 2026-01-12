@@ -81,6 +81,14 @@ Convert from a ZIP archive:
 dicom2tiff-cli archive.zip output.tiff
 ```
 
+Convert a single DICOM file without scanning the parent directory:
+
+```bash
+dicom2tiff-cli --single /path/to/file.dcm output.tiff
+```
+
+By default, when given a DICOM file, the CLI scans the parent directory for all DICOM files (useful for WSI files that span multiple frames). Use the `--single` (or `-s`) flag to process only the specified file.
+
 ### Rust Library
 
 ```rust
